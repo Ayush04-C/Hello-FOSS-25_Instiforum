@@ -4,12 +4,15 @@ import Navbar from "../components/navbar";
 import Sidebar from "@/components/sidebar";
 import { FloatingDock } from "@/components/FloatingDock";
 import {
+  IconAppWindow,
   IconBell,
   IconHome,
   IconLayoutDashboard,
+  IconPackage,
   IconPlane,
   IconPlus,
   IconSettings,
+  IconUser,
   IconX,
 } from "@tabler/icons-react";
 import InteractiveBg from "@/components/bg/interactivebg";
@@ -57,13 +60,18 @@ export default function RootLayout({ children }) {
     },
     {
       title: "Profile",
-      icon: <IconX />,
+      icon: <IconAppWindow />,
       href: "/profile",
     },
     {
       title: "Sign In",
       icon: <IconPlane />,
       href: "/signin",
+    },
+    {
+      title: "USER",
+      icon: <IconUser />,
+      href: "/users",
     },
   ];
 

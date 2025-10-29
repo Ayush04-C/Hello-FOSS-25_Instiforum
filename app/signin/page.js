@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseclient";
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +14,82 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  // On mount: try localStorage first, then (optionally) try Supabase session
+  useEffect(() => {
+    let mounted = true;
+
+    const checkExistingUser = async () => {
+      setLoading(true);
+      setMessage(
+        "Please Log out of existing session to Log in with other account..."
+      );
+
+      // 1) localStorage shortcut
+      try {
+        const localUser = localStorage.getItem("user");
+        if (localUser) {
+          // We already have a logged-in user
+          if (!mounted) return;
+          setMessage(
+            "Please Log out of existing session to Log in with other account..."
+          );
+          // small delay so message is visible (optional)
+          setTimeout(() => (window.location.href = "/profile"), 5000);
+          return;
+        }
+      } catch (e) {
+        // ignore storage errors
+      }
+
+      // 2) Optional Supabase fallback: try to read current session and fetch profile
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session;
+        if (session && session.user) {
+          // Fetch profile from 'users' table
+          const { data: userProfile, error: userError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", session.user.id)
+            .maybeSingle();
+
+          if (userError) {
+            // Supabase available but profile missing; allow manual login
+            setMessage("");
+            setLoading(false);
+            return;
+          }
+
+          if (userProfile) {
+            try {
+              localStorage.setItem("user", JSON.stringify(userProfile));
+              localStorage.setItem("sessionKey", session.access_token);
+            } catch (e) {}
+            if (!mounted) return;
+            setMessage("Restored session — redirecting...");
+            setTimeout(() => (window.location.href = "/profile"), 200);
+            return;
+          }
+        }
+      } catch (err) {
+        // Supabase might not be configured or network failed — we silently allow manual login
+        console.warn("Supabase session check failed:", err?.message || err);
+      }
+
+      // nothing found — allow user to login manually
+      if (mounted) {
+        setMessage("");
+        setLoading(false);
+      }
+    };
+
+    checkExistingUser();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleAuth = async () => {
     setLoading(true);
@@ -152,11 +228,7 @@ export default function AuthPage() {
           disabled={loading}
           className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3"
         >
-          {loading
-            ? "Processing..."
-            : isSignup
-            ? "Sign Up"
-            : "Log In"}
+          {loading ? "Processing..." : isSignup ? "Sign Up" : "Log In"}
         </Button>
 
         <p className="text-sm text-gray-400 mt-4 text-center">
