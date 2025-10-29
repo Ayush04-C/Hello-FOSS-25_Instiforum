@@ -247,4 +247,6 @@ export default function AuthPage() {
       </div>
     </div>
   );
-}
+};
+
+export default page;
